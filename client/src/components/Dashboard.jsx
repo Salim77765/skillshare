@@ -49,8 +49,17 @@ import {
 } from '@mui/icons-material';
 import { LoadingButton } from '@mui/lab';
 import { motion } from 'framer-motion';
-import { api } from '../config/api';
+import { api, endpoints } from '../config/api';
 import { toast } from 'react-toastify';
+
+// Default locations data
+const defaultLocations = {
+  'United States': ['New York', 'California', 'Texas', 'Florida'],
+  'India': ['Maharashtra', 'Karnataka', 'Tamil Nadu', 'Delhi'],
+  'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+  'Canada': ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
+  'Australia': ['New South Wales', 'Victoria', 'Queensland', 'Western Australia']
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -137,6 +146,7 @@ const Dashboard = () => {
     studentsCount: 0,
     skillsLearnedCount: 0
   });
+  const [chatOpen, setChatOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
   const filteredMentors = useMemo(() => {
@@ -225,18 +235,15 @@ const Dashboard = () => {
 
   useEffect(() => {
     const pollMessages = async () => {
-      if (selectedChat) {
+      if (selectedChat && chatOpen) {
         try {
-          const response = await fetch(`${api.baseURL}/api/messages/${selectedChat._id}`, {
-            method: 'GET',
-            headers: api.getHeaders()
-          });
-          const data = await response.json();
-          if (data.success) {
-            setMessages(data.data);
+          const response = await api.get(`/api/messages/${selectedChat._id}`);
+          if (response.data.success) {
+            setMessages(response.data.data);
           }
         } catch (error) {
           console.error('Error polling messages:', error);
+          // Don't show error toast for polling failures
         }
       }
     };
@@ -245,25 +252,25 @@ const Dashboard = () => {
     const interval = setInterval(pollMessages, 3000);
 
     return () => clearInterval(interval);
-  }, [selectedChat]);
+  }, [selectedChat, chatOpen]);
 
   const fetchLocations = async () => {
-    // Set the countries directly from defaultLocations
-    setCountries(Object.keys(defaultLocations));
-    if (filters.country) {
-      setStates(defaultLocations[filters.country] || []);
+    try {
+      // Set the countries directly from defaultLocations
+      setCountries(Object.keys(defaultLocations));
+      if (filters.country) {
+        setStates(defaultLocations[filters.country] || []);
+      }
+    } catch (error) {
+      console.error('Error fetching locations:', error);
     }
   };
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(`${api.baseURL}${api.endpoints.skillProfile}`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
-        setProfile(data.data);
+      const response = await api.get(endpoints.skillProfile.create);
+      if (response.data.success) {
+        setProfile(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -274,15 +281,11 @@ const Dashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${api.baseURL}/api/notifications`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.get('/api/notifications');
+      if (response.data.success) {
         // Separate request notifications from other notifications
-        const requests = data.data.filter(n => n.type === 'request');
-        const otherNotifications = data.data.filter(n => n.type !== 'request');
+        const requests = response.data.data.filter(n => n.type === 'request');
+        const otherNotifications = response.data.data.filter(n => n.type !== 'request');
         
         setRequestNotifications(requests);
         setRequestCount(requests.filter(n => !n.read).length);
@@ -296,13 +299,9 @@ const Dashboard = () => {
 
   const fetchRequests = async () => {
     try {
-      const response = await fetch(`${api.baseURL}/api/requests`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
-        setRequests(data.data);
+      const response = await api.get('/api/requests');
+      if (response.data.success) {
+        setRequests(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -311,14 +310,10 @@ const Dashboard = () => {
 
   const fetchMentors = async () => {
     try {
-      const response = await fetch(`${api.baseURL}/api/requests?status=accepted&role=student`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.get('/api/requests?status=accepted&role=student');
+      if (response.data.success) {
         // These are requests where current user is the student and mentor has accepted
-        setMentors(data.data);
+        setMentors(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching mentors:', error);
@@ -327,14 +322,10 @@ const Dashboard = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`${api.baseURL}/api/requests?status=accepted&role=mentor`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.get('/api/requests?status=accepted&role=mentor');
+      if (response.data.success) {
         // These are requests where current user is the mentor and they have accepted
-        setStudents(data.data);
+        setStudents(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -343,13 +334,9 @@ const Dashboard = () => {
 
   const fetchSkillProfile = async () => {
     try {
-      const response = await fetch(`${api.baseURL}${api.endpoints.skillProfile}`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSkillProfile(data.data);
+      const response = await api.get(endpoints.skillProfile.create);
+      if (response.data.success) {
+        setSkillProfile(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching skill profile:', error);
@@ -358,13 +345,9 @@ const Dashboard = () => {
 
   const fetchTrendingSkills = async () => {
     try {
-      const response = await fetch(`${api.baseURL}/api/skills/trending`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
-        setTrendingSkills(data.data);
+      const response = await api.get('/api/skills/trending');
+      if (response.data.success) {
+        setTrendingSkills(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching trending skills:', error);
@@ -373,15 +356,11 @@ const Dashboard = () => {
 
   const fetchUserStats = async () => {
     try {
-      const response = await fetch(`${api.baseURL}/api/skill-profile/stats`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.get('/api/skill-profile/stats');
+      if (response.data.success) {
         setUserStats({
-          studentsCount: data.data.studentsCount || 0,
-          skillsLearnedCount: data.data.skillsLearnedCount || 0
+          studentsCount: response.data.data.studentsCount || 0,
+          skillsLearnedCount: response.data.data.skillsLearnedCount || 0
         });
       }
     } catch (error) {
@@ -396,20 +375,15 @@ const Dashboard = () => {
 
   const handleCourseCompletion = async (studentRequest) => {
     try {
-      const response = await fetch(`${api.baseURL}/api/requests/${studentRequest._id}`, {
-        method: 'DELETE',
-        headers: api.getHeaders()
-      });
-
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.delete(`/api/requests/${studentRequest._id}`);
+      if (response.data.success) {
         // Remove from students list
         setStudents(prev => prev.filter(req => req._id !== studentRequest._id));
         
         // Update stats
         setUserStats(prev => ({
           ...prev,
-          studentsCount: (prev.studentsCount || 0) + 1
+          studentsCount: Math.max(0, (prev.studentsCount || 0) - 1)
         }));
 
         // Refresh all data
@@ -422,24 +396,17 @@ const Dashboard = () => {
         ]);
 
         toast.success('Course completed successfully');
-      } else {
-        throw new Error(data.message || 'Failed to complete course');
       }
     } catch (error) {
       console.error('Error completing course:', error);
-      toast.error(error.message || 'Failed to complete course');
+      toast.error(error.response?.data?.message || error.message || 'Failed to complete course');
     }
   };
 
   const handleLeaveRequest = async (mentorRequest) => {
     try {
-      const response = await fetch(`${api.baseURL}/api/requests/${mentorRequest._id}`, {
-        method: 'DELETE',
-        headers: api.getHeaders()
-      });
-
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.delete(`/api/requests/${mentorRequest._id}`);
+      if (response.data.success) {
         // Remove from mentors list
         setMentors(prev => prev.filter(req => req._id !== mentorRequest._id));
         
@@ -459,12 +426,10 @@ const Dashboard = () => {
         ]);
 
         toast.success('Successfully left the course');
-      } else {
-        throw new Error(data.message || 'Failed to leave course');
       }
     } catch (error) {
       console.error('Error leaving course:', error);
-      toast.error(error.message || 'Failed to leave course');
+      toast.error(error.response?.data?.message || error.message || 'Failed to leave course');
     }
   };
 
@@ -482,26 +447,26 @@ const Dashboard = () => {
   const handleSendRequest = async () => {
     try {
       setIsSubmitting(true);
-      const response = await fetch(`${api.baseURL}/api/requests`, {
-        method: 'POST',
-        headers: api.getHeaders(),
-        body: JSON.stringify({
-          mentorId: selectedProfile.user,
-          skillProfileId: selectedProfile._id,
-          message: requestMessage
-        })
+      const response = await api.post('/api/requests', {
+        mentorId: selectedProfile.user,
+        skillProfileId: selectedProfile._id,
+        message: requestMessage
       });
 
-      const data = await response.json();
-      if (data.success) {
-        alert('Request sent successfully!');
+      if (response.data.success) {
+        toast.success('Request sent successfully!');
         handleCloseDialog();
+        // Refresh the requests list
+        await Promise.all([
+          fetchRequests(),
+          fetchNotifications()
+        ]);
       } else {
-        throw new Error(data.message || 'Failed to send request');
+        throw new Error(response.data.message || 'Failed to send request');
       }
     } catch (error) {
       console.error('Error sending request:', error);
-      alert(error.message || 'Failed to send request. Please try again.');
+      toast.error(error.response?.data?.message || error.message || 'Failed to send request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -509,68 +474,26 @@ const Dashboard = () => {
 
   const handleNotificationAction = async (notificationId, action) => {
     try {
-      if (action === 'reject') {
-        // Get the notification details to get the request ID
-        const notificationResponse = await fetch(`${api.baseURL}/api/notifications/${notificationId}`, {
-          method: 'GET',
-          headers: api.getHeaders()
-        });
-        const notificationData = await notificationResponse.json();
+      const notificationResponse = await api.get(`/api/notifications/${notificationId}`);
+      
+      if (notificationResponse.data.success && notificationResponse.data.data.relatedRequest) {
+        const requestId = notificationResponse.data.data.relatedRequest._id;
         
-        if (notificationData.success && notificationData.data.relatedRequest) {
-          // First reject the request
-          const requestResponse = await fetch(`${api.baseURL}/api/requests/${notificationData.data.relatedRequest._id}`, {
-            method: 'DELETE',
-            headers: api.getHeaders()
-          });
-          
-          const requestData = await requestResponse.json();
-          if (requestData.success) {
-            // Then delete the notification
-            await fetch(`${api.baseURL}/api/notifications/${notificationId}`, {
-              method: 'DELETE',
-              headers: api.getHeaders()
-            });
-            
-            // Update UI
-            setRequests(prev => prev.filter(req => req._id !== notificationData.data.relatedRequest._id));
-            toast.success('Request rejected successfully');
-            
-            // Refresh data
-            await Promise.all([
-              fetchNotifications(),
-              fetchRequests(),
-              fetchMentors(),
-              fetchStudents()
-            ]);
-          } else {
-            throw new Error(requestData.message || 'Failed to reject request');
-          }
+        if (action === 'accept') {
+          await handleRequestAction(requestId, 'accepted');
+        } else if (action === 'reject') {
+          await handleRequestAction(requestId, 'rejected');
         }
-      } else if (action === 'accept') {
-        // Existing accept logic
-        const response = await fetch(`${api.baseURL}/api/notifications/${notificationId}`, {
-          method: 'GET',
-          headers: api.getHeaders()
-        });
-        const data = await response.json();
         
-        if (data.success && data.data.relatedRequest && data.data.relatedRequest._id) {
-          await handleRequestAction(data.data.relatedRequest._id, 'accepted');
-          
-          await fetch(`${api.baseURL}/api/notifications/${notificationId}`, {
-            method: 'DELETE',
-            headers: api.getHeaders()
-          });
-          
-          fetchNotifications();
-        } else {
-          throw new Error('Could not find related request');
-        }
+        // Delete the notification after handling the request
+        await api.delete(`/api/notifications/${notificationId}`);
+        
+        // Refresh notifications
+        await fetchNotifications();
       }
     } catch (error) {
-      console.error('Error handling notification action:', error);
-      toast.error(error.message || 'Failed to process the action');
+      console.error('Error handling notification:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to process notification');
     }
   };
 
@@ -578,17 +501,13 @@ const Dashboard = () => {
     try {
       setSelectedChat(request);
       setIsLoadingChat(true);
-      const response = await fetch(`${api.baseURL}/api/messages/${request._id}`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setMessages(data.data);
+      const response = await api.get(`/api/messages/${request._id}`);
+      if (response.data.success) {
+        setMessages(response.data.data);
+        setChatOpen(true);
         scrollToBottom();
       } else {
-        throw new Error(data.message || 'Failed to load chat messages');
+        throw new Error(response.data.message || 'Failed to load chat messages');
       }
     } catch (error) {
       console.error('Error opening chat:', error);
@@ -601,6 +520,7 @@ const Dashboard = () => {
   const handleChatClose = () => {
     setSelectedChat(null);
     setMessages([]);
+    setChatOpen(false);
     setNewMessage('');
   };
 
@@ -610,27 +530,21 @@ const Dashboard = () => {
 
     setIsSendingMessage(true);
     try {
-      const response = await fetch(`${api.baseURL}/api/messages`, {
-        method: 'POST',
-        headers: api.getHeaders(),
-        body: JSON.stringify({
-          requestId: selectedChat._id,
-          content: newMessage.trim()
-        })
+      const response = await api.post('/api/messages', {
+        requestId: selectedChat._id,
+        content: newMessage.trim()
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to send message');
+      if (response.data.success) {
+        // Add the new message to the messages array immediately
+        setMessages(prevMessages => [...prevMessages, response.data.data]);
+        setNewMessage('');
+        scrollToBottom();
+      } else {
+        throw new Error(response.data.message || 'Failed to send message');
       }
-
-      // Add the new message to the messages array immediately
-      setMessages(prevMessages => [...prevMessages, data.data]);
-      setNewMessage('');
-      scrollToBottom();
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message. Please try again.');
+      toast.error(error.response?.data?.message || error.message || 'Failed to send message. Please try again.');
     } finally {
       setIsSendingMessage(false);
     }
@@ -638,61 +552,13 @@ const Dashboard = () => {
 
   const handleRequestAction = async (requestId, action) => {
     try {
-      let endpoint = `${api.baseURL}/api/requests/${requestId}`;
-      
-      if (action === 'accepted') {
-        endpoint += '/accept';
-      } else if (action === 'rejected') {
-        endpoint += '/reject';
-      }
+      // Convert action to status for API endpoint
+      const status = action === 'accepted' ? 'accept' : 'reject';
+      const response = await api.put(`/api/requests/${requestId}/${status}`);
 
-      console.log('Making request to:', endpoint); // Debug log
-
-      const response = await fetch(endpoint, {
-        method: 'PUT',
-        headers: api.getHeaders()
-      });
-
-      console.log('Response status:', response.status); // Debug log
-
-      const data = await response.json();
-      console.log('Response data:', data); // Debug log
-
-      if (data.success) {
-        if (action === 'rejected') {
-          // Remove from all lists
-          setRequests(prev => prev.filter(req => req._id !== requestId));
-          setMentors(prev => prev.filter(req => req._id !== requestId));
-          setStudents(prev => prev.filter(req => req._id !== requestId));
-          
-          // Delete associated notification if exists
-          const notification = [...notifications, ...requestNotifications]
-            .find(n => n.relatedRequest && n.relatedRequest._id === requestId);
-          
-          if (notification) {
-            await fetch(`${api.baseURL}/api/notifications/${notification._id}`, {
-              method: 'DELETE',
-              headers: api.getHeaders()
-            });
-          }
-
-          toast.success('Request rejected successfully');
-        } else {
-          // Existing accept logic
-          const currentUser = JSON.parse(localStorage.getItem('user'));
-          setRequests(prev => prev.filter(req => req._id !== requestId));
-          
-          const request = [...requests, ...mentors, ...students].find(req => req._id === requestId);
-          if (request) {
-            if (currentUser._id === request.mentor._id) {
-              setStudents(prev => [...prev, { ...request, status: 'accepted' }]);
-            } else if (currentUser._id === request.student._id) {
-              setMentors(prev => [...prev, { ...request, status: 'accepted' }]);
-            }
-          }
-          toast.success('Request accepted successfully');
-        }
-
+      if (response.data.success) {
+        toast.success(`Request ${action} successfully`);
+        
         // Refresh all data
         await Promise.all([
           fetchNotifications(),
@@ -701,37 +567,46 @@ const Dashboard = () => {
           fetchStudents()
         ]);
 
-        // Close menus
+        // Close any open menus
         handleRequestClose();
         handleNotificationClose();
-      } else {
-        throw new Error(data.message || 'Failed to update request');
       }
     } catch (error) {
-      console.error('Error updating request:', error);
-      toast.error(error.message || 'Failed to update request');
+      console.error('Error handling request action:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to process request');
     }
   };
 
   const handleDeleteNotification = async (notificationId) => {
     try {
-      const response = await fetch(`${api.baseURL}/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: api.getHeaders()
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        // Remove the notification from the state
+      const response = await api.delete(`/api/notifications/${notificationId}`);
+      if (response.data.success) {
+        // Remove the notification from both lists
         setNotifications(prev => prev.filter(n => n._id !== notificationId));
-        setNotificationCount(prev => prev - 1);
+        setRequestNotifications(prev => prev.filter(n => n._id !== notificationId));
+        
+        // Update notification counts
+        setNotificationCount(prev => Math.max(0, prev - 1));
+        setRequestCount(prev => Math.max(0, prev - 1));
+        
         toast.success('Notification deleted successfully');
-      } else {
-        throw new Error(data.message || 'Failed to delete notification');
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
-      toast.error(error.message || 'Failed to delete notification');
+      toast.error(error.response?.data?.message || error.message || 'Failed to delete notification');
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const response = await api.put(`/api/notifications/${notificationId}/read`);
+      if (response.data.success) {
+        await fetchNotifications();
+        toast.success('Notification marked as read');
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to mark notification as read');
     }
   };
 
@@ -796,15 +671,10 @@ const Dashboard = () => {
         ...(locationSearch && { location: locationSearch })
       });
 
-      const response = await fetch(`${api.baseURL}${api.endpoints.searchProfiles}?${queryParams}`, {
-        method: 'GET',
-        headers: api.getHeaders()
-      });
-
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.get(`${endpoints.skillProfile.search}?${queryParams}`);
+      if (response.data.success) {
         // Include all profiles including the user's own profile
-        setSearchResults(data.data);
+        setSearchResults(response.data.data);
       }
     } catch (error) {
       console.error('Error searching profiles:', error);
@@ -885,18 +755,6 @@ const Dashboard = () => {
 
   const handleStudentClose = () => {
     setStudentAnchorEl(null);
-  };
-
-  const markNotificationAsRead = async (notificationId) => {
-    try {
-      await fetch(`${api.baseURL}/api/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: api.getHeaders()
-      });
-      await fetchNotifications();
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
   };
 
   if (loading) {
