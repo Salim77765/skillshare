@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -12,14 +12,17 @@ import {
   CircularProgress,
   MenuItem,
   Rating,
-  Alert
+  Alert,
+  InputAdornment
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { LoadScript, Autocomplete as GoogleAutocomplete } from '@react-google-maps/api';
 import { api, endpoints } from '../config/api';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 const libraries = ['places'];
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const skillCategories = [
   'Arts & Crafts',
@@ -58,6 +61,8 @@ const SkillProfileForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [autocomplete, setAutocomplete] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -76,29 +81,40 @@ const SkillProfileForm = () => {
     languages: []
   });
 
-  const onLoad = (autocompleteInstance) => {
+  const onLoad = useCallback((autocompleteInstance) => {
+    console.log('Google Maps Places loaded');
     setAutocomplete(autocompleteInstance);
-  };
+  }, []);
 
-  const onPlaceChanged = () => {
+  const onPlaceChanged = useCallback(() => {
     if (autocomplete) {
       const place = autocomplete.getPlace();
+      console.log('Selected place:', place);
+      
+      if (!place.geometry) {
+        console.error('No geometry for this place');
+        return;
+      }
+
       let state = '';
       let country = '';
       let city = '';
       
       // Extract city, state and country from address components
       place.address_components?.forEach(component => {
-        if (component.types.includes('locality')) {
+        const types = component.types;
+        if (types.includes('locality') || types.includes('postal_town')) {
           city = component.long_name;
         }
-        if (component.types.includes('administrative_area_level_1')) {
+        if (types.includes('administrative_area_level_1')) {
           state = component.long_name;
         }
-        if (component.types.includes('country')) {
+        if (types.includes('country')) {
           country = component.long_name;
         }
       });
+
+      console.log('Extracted location:', { city, state, country });
 
       setFormData(prev => ({
         ...prev,
@@ -108,7 +124,12 @@ const SkillProfileForm = () => {
         country
       }));
     }
-  };
+  }, [autocomplete]);
+
+  const onLoadError = useCallback((error) => {
+    console.error('Google Maps Places load error:', error);
+    setLoadError(error);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -403,92 +424,75 @@ const SkillProfileForm = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
-                  <LoadScript 
-                    googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-                    libraries={libraries}
-                  >
-                    <GoogleAutocomplete
-                      onLoad={onLoad}
-                      onPlaceChanged={onPlaceChanged}
+                <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Location Information</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <LoadScript
+                      googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+                      libraries={libraries}
+                      onLoad={() => setIsLoaded(true)}
+                      onError={onLoadError}
                     >
-                      <TextField
-                        fullWidth
-                        label="Address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        required
-                        helperText="Enter your complete address"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 2,
-                            '&:hover fieldset': {
-                              borderColor: '#1976d2',
-                            },
-                          }
-                        }}
-                      />
-                    </GoogleAutocomplete>
-                  </LoadScript>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="City"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    required
-                    helperText="Your city will be used for location-based searches"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: '#1976d2',
-                        },
-                      }
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="State/Region"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    required
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: '#1976d2',
-                        },
-                      }
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleChange}
-                    required
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: '#1976d2',
-                        },
-                      }
-                    }}
-                  />
+                      {isLoaded && !loadError ? (
+                        <GoogleAutocomplete
+                          onLoad={onLoad}
+                          onPlaceChanged={onPlaceChanged}
+                        >
+                          <TextField
+                            fullWidth
+                            label="Search Location"
+                            variant="outlined"
+                            value={formData.address}
+                            onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <LocationOnIcon />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        </GoogleAutocomplete>
+                      ) : loadError ? (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                          Error loading Google Maps: {loadError.message}
+                        </Alert>
+                      ) : (
+                        <CircularProgress />
+                      )}
+                    </LoadScript>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="City"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      disabled
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="State"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      disabled
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="Country"
+                      name="country"
+                      value={formData.country}
+                      onChange={handleChange}
+                      disabled
+                    />
+                  </Grid>
                 </Grid>
 
                 <Grid item xs={12}>
