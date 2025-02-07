@@ -17,7 +17,7 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { LoadScript, Autocomplete as GoogleAutocomplete } from '@react-google-maps/api';
-import { api } from '../config/api';
+import { api, endpoints } from '../config/api';
 
 const libraries = ['places'];
 
@@ -116,32 +116,14 @@ const SkillProfileForm = () => {
     setError('');
 
     try {
-      const response = await fetch(`${api.baseURL}${api.endpoints.skillProfile}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await api.post(endpoints.skillProfile.create, formData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create skill profile');
+      if (response.data.success) {
+        navigate('/dashboard');
       }
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to create skill profile');
-      }
-
-      // Show success message and navigate
-      alert('Profile created successfully!');
-      navigate('/dashboard');
     } catch (error) {
-      setError(error.message);
+      setError(error.response?.data?.message || error.message || 'Failed to create skill profile');
       console.error('Error creating skill profile:', error);
-      alert(error.message || 'Failed to create skill profile. Please try again.');
     } finally {
       setLoading(false);
     }
