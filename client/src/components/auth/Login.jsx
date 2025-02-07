@@ -10,7 +10,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { api } from '../../config/api';
+import api, { endpoints } from '../../config/api';
 import { motion } from 'framer-motion';
 
 const Login = () => {
@@ -35,15 +35,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${api.baseURL}${api.endpoints.login}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
+      const response = await api.post(endpoints.login, formData);
+      const { data } = response;
 
       if (data.success) {
         localStorage.setItem('token', data.data.token);
@@ -62,9 +55,9 @@ const Login = () => {
       } else {
         setError(data.message || 'Login failed');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('An error occurred during login');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || 'An error occurred during login');
     } finally {
       setLoading(false);
     }

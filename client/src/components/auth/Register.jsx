@@ -1,89 +1,70 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Container,
   TextField,
   Button,
   Typography,
+  Container,
   Paper,
-  CircularProgress,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
+import api, { endpoints } from '../../config/api';
 import { motion } from 'framer-motion';
-import { api } from '../../config/api';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Client-side validation
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error('Passwords do not match');
-      }
-
-      if (formData.password.length < 6) {
-        throw new Error('Password must be at least 6 characters long');
-      }
-
-      const response = await fetch(`${api.baseURL}${api.endpoints.register}`, {
-        method: 'POST',
-        headers: api.getHeaders(),
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password
-        })
+      const response = await api.post(endpoints.register, {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
       });
+      
+      const { data } = response;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
-      if (data.success && data.data.token) {
-        // Store the token
+      if (data.success) {
         localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        
-        // Clear form and errors
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: ''
-        });
-        
-        // Redirect to dashboard
-        navigate('/dashboard');
+        localStorage.setItem('user', JSON.stringify({
+          id: data.data.id,
+          name: data.data.name,
+          email: data.data.email
+        }));
+        navigate('/create-profile');
       } else {
-        throw new Error(data.message || 'Registration failed');
+        setError(data.message || 'Registration failed');
       }
-    } catch (error) {
-      console.error('Registration error:', error);
-      setError(error.message || 'Failed to register. Please try again.');
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.response?.data?.message || 'An error occurred during registration');
     } finally {
       setLoading(false);
     }
