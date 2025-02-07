@@ -50,7 +50,6 @@ import {
 import { LoadingButton } from '@mui/lab';
 import { motion } from 'framer-motion';
 import { api, endpoints } from '../config/api';
-import { toast } from 'react-toastify';
 
 // Default locations data
 const defaultLocations = {
@@ -243,7 +242,6 @@ const Dashboard = () => {
           }
         } catch (error) {
           console.error('Error polling messages:', error);
-          // Don't show error toast for polling failures
         }
       }
     };
@@ -394,12 +392,9 @@ const Dashboard = () => {
           fetchStudents(),
           fetchUserStats()
         ]);
-
-        toast.success('Course completed successfully');
       }
     } catch (error) {
       console.error('Error completing course:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to complete course');
     }
   };
 
@@ -424,12 +419,9 @@ const Dashboard = () => {
           fetchStudents(),
           fetchUserStats()
         ]);
-
-        toast.success('Successfully left the course');
       }
     } catch (error) {
       console.error('Error leaving course:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to leave course');
     }
   };
 
@@ -454,7 +446,6 @@ const Dashboard = () => {
       });
 
       if (response.data.success) {
-        toast.success('Request sent successfully!');
         handleCloseDialog();
         // Refresh the requests list
         await Promise.all([
@@ -466,7 +457,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error sending request:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to send request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -493,7 +483,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error handling notification:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to process notification');
     }
   };
 
@@ -511,7 +500,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error opening chat:', error);
-      toast.error('Failed to open chat');
     } finally {
       setIsLoadingChat(false);
     }
@@ -544,7 +532,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to send message. Please try again.');
     } finally {
       setIsSendingMessage(false);
     }
@@ -557,8 +544,6 @@ const Dashboard = () => {
       const response = await api.put(`/api/requests/${requestId}/${status}`);
 
       if (response.data.success) {
-        toast.success(`Request ${action} successfully`);
-        
         // Refresh all data
         await Promise.all([
           fetchNotifications(),
@@ -573,7 +558,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error handling request action:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to process request');
     }
   };
 
@@ -588,12 +572,9 @@ const Dashboard = () => {
         // Update notification counts
         setNotificationCount(prev => Math.max(0, prev - 1));
         setRequestCount(prev => Math.max(0, prev - 1));
-        
-        toast.success('Notification deleted successfully');
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to delete notification');
     }
   };
 
@@ -602,11 +583,9 @@ const Dashboard = () => {
       const response = await api.put(`/api/notifications/${notificationId}/read`);
       if (response.data.success) {
         await fetchNotifications();
-        toast.success('Notification marked as read');
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to mark notification as read');
     }
   };
 

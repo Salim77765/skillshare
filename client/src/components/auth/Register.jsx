@@ -7,8 +7,7 @@ import {
   Button,
   Typography,
   Paper,
-  CircularProgress,
-  Alert
+  CircularProgress
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { api } from '../../config/api';
@@ -35,7 +34,6 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       // Client-side validation
@@ -143,18 +141,17 @@ const Register = () => {
             </Typography>
 
             {error && (
-              <Alert 
-                severity="error" 
+              <Typography 
+                align="center" 
                 sx={{ 
                   mb: 3,
-                  borderRadius: 2,
-                  '& .MuiAlert-icon': {
-                    fontSize: '1.5rem'
-                  }
+                  color: 'error.main',
+                  fontSize: '1.1rem',
+                  opacity: 0.8
                 }}
               >
                 {error}
-              </Alert>
+              </Typography>
             )}
 
             <form onSubmit={handleSubmit} noValidate>

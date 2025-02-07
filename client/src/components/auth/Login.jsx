@@ -6,9 +6,7 @@ import {
   Button,
   Typography,
   Container,
-  Paper,
-  Alert,
-  CircularProgress
+  Paper
 } from '@mui/material';
 import { api } from '../../config/api';
 import { motion } from 'framer-motion';
@@ -20,7 +18,7 @@ const Login = () => {
     password: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -31,35 +29,34 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      const response = await api.post('/api/auth/login', formData);
-      const data = response.data;
+      const response = await api.post('/api/auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
 
-      if (data.success) {
-        localStorage.setItem('token', data.data.token);
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify({
-          id: data.data.id,
-          name: data.data.name,
-          email: data.data.email
+          id: response.data.data.id,
+          name: response.data.data.name,
+          email: response.data.data.email
         }));
 
         // Redirect based on whether user has a skill profile
-        if (data.data.hasSkillProfile) {
+        if (response.data.data.hasSkillProfile) {
           navigate('/dashboard');
         } else {
           navigate('/create-profile');
         }
-      } else {
-        setError(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('An error occurred during login');
+      setError(error.response?.data?.message || error.message || 'Failed to login');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -106,18 +103,15 @@ const Login = () => {
             </Typography>
             
             {error && (
-              <Alert 
-                severity="error" 
+              <Typography 
+                variant="body1" 
                 sx={{ 
-                  mb: 3,
-                  borderRadius: 2,
-                  '& .MuiAlert-icon': {
-                    fontSize: '1.5rem'
-                  }
+                  color: 'error.main',
+                  mb: 3
                 }}
               >
                 {error}
-              </Alert>
+              </Typography>
             )}
 
             <form onSubmit={handleSubmit}>
@@ -167,7 +161,7 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={loading}
+                disabled={isSubmitting}
                 sx={{
                   mt: 2,
                   mb: 3,
@@ -183,8 +177,10 @@ const Login = () => {
                   }
                 }}
               >
-                {loading ? (
-                  <CircularProgress size={24} color="inherit" />
+                {isSubmitting ? (
+                  <Typography variant="body1" sx={{ color: 'inherit' }}>
+                    Signing In...
+                  </Typography>
                 ) : (
                   'Sign In'
                 )}

@@ -1,5 +1,5 @@
+// This is a test comment for Vercel auto-deployment
 import axios from 'axios';
-import { toast } from 'react-toastify';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -34,8 +34,7 @@ api.interceptors.response.use(
     
     // Handle network errors
     if (!error.response) {
-      toast.error('Network error. Please check your connection.');
-      return Promise.reject(error);
+      return Promise.reject(new Error('Network error. Please check your connection.'));
     }
 
     // Handle unauthorized errors
@@ -47,8 +46,6 @@ api.interceptors.response.use(
     }
 
     // Handle other errors
-    const message = error.response?.data?.message || error.message || 'An error occurred';
-    toast.error(message);
     return Promise.reject(error);
   }
 );
