@@ -10,8 +10,9 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import api, { endpoints } from '../../config/api';
+import api from '../../config/api';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const Register = () => {
     }
 
     try {
-      const response = await api.post(endpoints.register, {
+      const response = await api.post(api.endpoints.register, {
         name: formData.name,
         email: formData.email,
         password: formData.password

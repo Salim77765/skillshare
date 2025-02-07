@@ -10,7 +10,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import api, { endpoints } from '../../config/api';
+import api from '../../config/api';
 import { motion } from 'framer-motion';
 
 const Login = () => {
@@ -35,7 +35,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await api.post(endpoints.login, formData);
+      const response = await api.post(api.endpoints.login, formData);
       const { data } = response;
 
       if (data.success) {
