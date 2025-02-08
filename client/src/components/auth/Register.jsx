@@ -10,7 +10,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { api } from '../../config/api';
+import { api, endpoints } from '../../config/api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -45,43 +45,20 @@ const Register = () => {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      const response = await fetch(`${api.baseURL}${api.endpoints.register}`, {
-        method: 'POST',
-        headers: api.getHeaders(),
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password
-        })
+      const response = await api.post(endpoints.auth.register, {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
-      if (data.success && data.data.token) {
-        // Store the token
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        
-        // Clear form and errors
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: ''
-        });
-        
-        // Redirect to dashboard
-        navigate('/dashboard');
-      } else {
-        throw new Error(data.message || 'Registration failed');
+      if (response.data.success) {
+        // Don't store token and user data after registration
+        // Instead, redirect to login page
+        navigate('/login');
       }
     } catch (error) {
+      setError(error.response?.data?.message || error.message || 'Failed to register');
       console.error('Registration error:', error);
-      setError(error.message || 'Failed to register. Please try again.');
     } finally {
       setLoading(false);
     }
