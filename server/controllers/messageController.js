@@ -4,7 +4,7 @@ const Request = require('../models/Request');
 // Send a message
 exports.sendMessage = async (req, res) => {
     try {
-        const { requestId, content } = req.body;
+        const { requestId, content, documentUrl, documentName, documentType } = req.body;
         const senderId = req.user.id;
 
         // Find the request to verify the users are connected
@@ -27,13 +27,21 @@ exports.sendMessage = async (req, res) => {
         // Determine the receiver (if sender is student, receiver is mentor and vice versa)
         const receiverId = senderId === request.student.toString() ? request.mentor : request.student;
 
-        const message = new Message({
+        const messageData = {
             sender: senderId,
             receiver: receiverId,
             request: requestId,
             content
-        });
+        };
 
+        // Add document information if provided
+        if (documentUrl && documentName && documentType) {
+            messageData.documentUrl = documentUrl;
+            messageData.documentName = documentName;
+            messageData.documentType = documentType;
+        }
+
+        const message = new Message(messageData);
         await message.save();
 
         // Populate sender and receiver details
@@ -50,7 +58,7 @@ exports.sendMessage = async (req, res) => {
         console.error('Error in sendMessage:', error);
         res.status(500).json({
             success: false,
-            message: error.message || 'Error sending message'
+            message: 'Error sending message'
         });
     }
 };
@@ -98,7 +106,7 @@ exports.getChatHistory = async (req, res) => {
         console.error('Error in getChatHistory:', error);
         res.status(500).json({
             success: false,
-            message: error.message || 'Error fetching chat history'
+            message: 'Error fetching chat history'
         });
     }
 };

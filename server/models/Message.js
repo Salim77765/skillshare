@@ -20,6 +20,18 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    documentUrl: {
+        type: String,
+        required: false
+    },
+    documentName: {
+        type: String,
+        required: false
+    },
+    documentType: {
+        type: String,
+        required: false
+    },
     read: {
         type: Boolean,
         default: false
