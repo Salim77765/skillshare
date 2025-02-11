@@ -965,19 +965,30 @@ const Dashboard = () => {
               px: { xs: 2, sm: 3 }
             }}
           >
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.5px'
-              }}
-            >
-              SkillShare
-            </Typography>
-
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <img 
+                src="https://static.vecteezy.com/system/resources/previews/019/485/187/non_2x/decorative-dragon-emblem-image-for-logo-emblem-tattoo-embroidery-laser-cutting-sublimation-vector.jpg" // Update with your actual logo path
+                alt="SkillShare Logo" 
+                style={{ 
+                  height: 40, 
+                  width: 'auto', 
+                  marginRight: 8,
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' // Optional: add a subtle shadow
+                }} 
+              />
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  letterSpacing: '-0.5px'
+                }}
+              >
+                SkillShare
+              </Typography>
+            </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
               {/* Search Icon */}
               <IconButton
@@ -1006,17 +1017,31 @@ const Dashboard = () => {
                     mt: 2,
                     width: '80vw',
                     maxWidth: '600px',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                    overflow: 'hidden'
                   }
                 }}
               >
-                <Box sx={{ p: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 3, color: '#1e293b', fontWeight: 600 }}>
-                    Search Skills
+                <Box sx={{ 
+                  p: 3, 
+                  background: 'linear-gradient(to right, #f8fafc, #f1f5f9)', 
+                  borderBottom: '1px solid rgba(226, 232, 240, 0.6)' 
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 3, 
+                      color: '#1e293b', 
+                      fontWeight: 700, 
+                      letterSpacing: '-0.5px', 
+                      textAlign: 'center' 
+                    }}
+                  >
+                    Discover Skills
                   </Typography>
                   
-                  <Grid container spacing={2}>
+                  <Grid container spacing={3}>
                     <Grid item xs={12}>
                       <TextField
                         fullWidth
@@ -1028,11 +1053,23 @@ const Dashboard = () => {
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
-                              <SearchIcon sx={{ color: '#64748b' }} />
+                              <SearchIcon sx={{ 
+                                color: '#64748b',
+                                mr: 1 
+                              }} />
                             </InputAdornment>
                           ),
                         }}
-                        sx={{ mb: 2 }}
+                        sx={{ 
+                          mb: 2,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '10px',
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#3b82f6',
+                              borderWidth: 2
+                            }
+                          }
+                        }}
                       />
                       
                       <TextField
@@ -1042,7 +1079,16 @@ const Dashboard = () => {
                         onChange={(e) => setLocationSearch(e.target.value)}
                         variant="outlined"
                         placeholder="Enter city, area, or landmark..."
-                        sx={{ mb: 2 }}
+                        sx={{ 
+                          mb: 2,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '10px',
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#3b82f6',
+                              borderWidth: 2
+                            }
+                          }
+                        }}
                       />
                     </Grid>
                     
@@ -1054,6 +1100,14 @@ const Dashboard = () => {
                           label="Country"
                           value={filters.country}
                           onChange={(e) => handleFilterChange('country', e.target.value)}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '10px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#3b82f6'
+                              }
+                            }
+                          }}
                         >
                           <MenuItem value="">All Countries</MenuItem>
                           {countries.map((country) => (
@@ -1071,6 +1125,14 @@ const Dashboard = () => {
                           value={filters.state}
                           onChange={(e) => handleFilterChange('state', e.target.value)}
                           disabled={!filters.country}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '10px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#3b82f6'
+                              }
+                            }
+                          }}
                         >
                           <MenuItem value="">All States</MenuItem>
                           {states.map((state) => (
@@ -1087,6 +1149,14 @@ const Dashboard = () => {
                           value={filters.city}
                           onChange={(e) => handleFilterChange('city', e.target.value)}
                           placeholder="Enter city name"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '10px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#3b82f6'
+                              }
+                            }
+                          }}
                         />
                       </Grid>
                     </Grid>
@@ -1099,13 +1169,18 @@ const Dashboard = () => {
                           label="Category"
                           onChange={(e) => handleFilterChange('category', e.target.value)}
                           sx={{
-                            borderRadius: '8px',
+                            borderRadius: '10px',
                             bgcolor: '#f8fafc',
                             '& .MuiOutlinedInput-notchedOutline': {
                               borderColor: '#e2e8f0',
+                              borderWidth: 1
                             },
                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#94a3b8',
+                              borderColor: '#94a3b8'
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#3b82f6',
+                              borderWidth: 2
                             }
                           }}
                         >
@@ -1127,13 +1202,18 @@ const Dashboard = () => {
                           label="Experience Level"
                           onChange={(e) => handleFilterChange('experienceLevel', e.target.value)}
                           sx={{
-                            borderRadius: '8px',
+                            borderRadius: '10px',
                             bgcolor: '#f8fafc',
                             '& .MuiOutlinedInput-notchedOutline': {
                               borderColor: '#e2e8f0',
+                              borderWidth: 1
                             },
                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#94a3b8',
+                              borderColor: '#94a3b8'
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#3b82f6',
+                              borderWidth: 2
                             }
                           }}
                         >
@@ -1634,7 +1714,8 @@ const Dashboard = () => {
                     <Avatar 
                       src={profile?.profilePicture ? `${api.baseURL}${profile.profilePicture}` : ''}
                       sx={{ 
-                        width: 32, 
+                        mr: 2,
+                        width: 32,
                         height: 32,
                         bgcolor: profile?.profilePicture ? 'transparent' : 'primary.main',
                         fontSize: '1rem'
@@ -1832,7 +1913,8 @@ const Dashboard = () => {
                       color: '#3b82f6',
                       fontWeight: 500,
                       '&:hover': {
-                        bgcolor: 'rgba(59, 130, 246, 0.2)'
+                        transform: 'scale(1.05)',
+                        boxShadow: '0 4px 10px rgba(59, 130, 246, 0.2)'
                       }
                     }}
                   />
@@ -1849,180 +1931,234 @@ const Dashboard = () => {
           <Grid item xs={12}>
             {searching ? (
               <Grid item xs={12} sx={{ textAlign: 'center', py: 4 }}>
-                <CircularProgress sx={{ color: '#3b82f6' }} />
+                <CircularProgress 
+                  sx={{ 
+                    color: '#3b82f6', 
+                    '& .MuiCircularProgress-circle': { 
+                      strokeLinecap: 'round',
+                      animation: 'pulse 1.5s infinite ease-in-out'
+                    }
+                  }} 
+                />
               </Grid>
             ) : searchResults.length > 0 ? (
-              searchResults.map((result) => {
-                const isOwnProfile = result.user?._id === user?._id;
-                return (
-                  <Grid item xs={12} sm={6} md={4} key={result._id}>
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 3,
-                        height: '100%',
-                        background: 'rgba(255, 255, 255, 0.9)',
-                        backdropFilter: 'blur(10px)',
-                        borderRadius: '16px',
-                        border: '1px solid rgba(226, 232, 240, 0.8)',
-                        transition: 'all 0.3s ease-in-out',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 12px 24px rgba(148, 163, 184, 0.15)'
-                        }
-                      }}
-                    >
-                      {isOwnProfile && (
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: 16,
-                            right: 16,
-                            background: '#3b82f6',
-                            color: 'white',
-                            px: 2,
-                            py: 0.5,
-                            borderRadius: '20px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            letterSpacing: '0.5px',
-                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-                            zIndex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5
-                          }}
-                        >
-                          <PersonIcon sx={{ fontSize: 16 }} />
-                          Your Profile
-                        </Box>
-                      )}
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Avatar 
-                          src={result.profilePicture ? `${api.baseURL}${result.profilePicture}` : ''}
-                          sx={{ 
-                            mr: 2,
-                            width: 56,
-                            height: 56,
-                            bgcolor: result.profilePicture ? 'transparent' : '#3b82f6',
-                            color: 'white',
-                            border: '2px solid #3b82f6',
-                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)'
-                          }}
-                        >
-                          {!result.profilePicture && result.user?.name?.[0]}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h6" sx={{ mb: 0, color: '#1e293b', fontWeight: 600 }}>
-                            {result.title}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#64748b' }}>
-                            {result.user?.name}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Typography variant="body2" sx={{ color: '#64748b' }} gutterBottom>
-                        {result.category} • {result.experienceLevel}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
+              <Grid container spacing={3}>
+                {searchResults.map((result) => {
+                  const isOwnProfile = result.user?._id === user?._id;
+                  return (
+                    <Grid item xs={12} sm={6} md={4} key={result._id}>
+                      <Paper
+                        elevation={0}
                         sx={{
-                          mb: 2,
+                          p: 3,
+                          height: '100%',
+                          background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))',
+                          backdropFilter: 'blur(15px)',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(226, 232, 240, 0.6)',
+                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                          transition: 'all 0.4s ease-in-out',
+                          position: 'relative',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          color: '#475569',
-                          lineHeight: 1.6
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: '-50%',
+                            left: '-50%',
+                            width: '200%',
+                            height: '200%',
+                            background: 'radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%)',
+                            transform: 'rotate(-45deg)',
+                            zIndex: 0
+                          },
+                          '&:hover': {
+                            transform: 'translateY(-8px)',
+                            boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1)'
+                          }
                         }}
                       >
-                        {result.description}
-                      </Typography>
-
-                      <Box sx={{ mt: 'auto' }}>
-                        <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
-                          Skills:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {result.skills.slice(0, 3).map((skill, index) => (
-                            <Chip
-                              key={index}
-                              label={skill}
-                              size="small"
-                              sx={{ 
-                                borderRadius: '6px',
-                                bgcolor: '#dbeafe',
-                                color: '#1e40af',
-                                fontWeight: 500,
-                                '&:hover': {
-                                  bgcolor: '#bfdbfe'
-                                }
-                              }}
-                            />
-                          ))}
-                          {result.skills.length > 3 && (
-                            <Chip
-                              label={`+${result.skills.length - 3}`}
-                              size="small"
-                              sx={{ 
-                                borderRadius: '6px',
-                                bgcolor: '#dbeafe',
-                                color: '#1e40af',
-                                fontWeight: 500,
-                                '&:hover': {
-                                  bgcolor: '#bfdbfe'
-                                }
-                              }}
-                            />
-                          )}
+                        {isOwnProfile && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 16,
+                              right: 16,
+                              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                              color: 'white',
+                              px: 2,
+                              py: 0.5,
+                              borderRadius: '20px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              letterSpacing: '0.5px',
+                              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                              zIndex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5
+                            }}
+                          >
+                            <PersonIcon sx={{ fontSize: 16 }} />
+                            Your Profile
+                          </Box>
+                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, position: 'relative', zIndex: 1 }}>
+                          <Avatar 
+                            src={result.profilePicture ? `${api.baseURL}${result.profilePicture}` : ''}
+                            sx={{ 
+                              mr: 2,
+                              width: 64,
+                              height: 64,
+                              bgcolor: result.profilePicture ? 'transparent' : '#3b82f6',
+                              color: 'white',
+                              border: '3px solid #3b82f6',
+                              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.25)',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                transform: 'scale(1.05)'
+                              }
+                            }}
+                          >
+                            {!result.profilePicture && result.user?.name?.[0]}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="h6" sx={{ mb: 0, color: '#1e293b', fontWeight: 700, letterSpacing: '-0.5px' }}>
+                              {result.title}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
+                              {result.user?.name}
+                            </Typography>
+                          </Box>
                         </Box>
-                      </Box>
 
-                      <Box sx={{ 
-                        mt: 2,
-                        pt: 2,
-                        borderTop: '1px solid #e2e8f0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <Typography variant="body2" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <LocationOnIcon sx={{ fontSize: '1rem' }} />
-                          {[result.city, result.state, result.country].filter(Boolean).join(', ') || 'Location not specified'}
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500, mb: 1 }} gutterBottom>
+                          {result.category} • {result.experienceLevel}
                         </Typography>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          onClick={() => handleContactClick(result)}
+
+                        <Typography
+                          variant="body2"
                           sx={{
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            }
+                            mb: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            color: '#475569',
+                            lineHeight: 1.6,
+                            fontWeight: 400
                           }}
                         >
-                          Contact
-                        </Button>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                );
-              })
+                          {result.description}
+                        </Typography>
+
+                        <Box sx={{ mt: 'auto' }}>
+                          <Typography variant="body2" sx={{ color: '#64748b', mb: 1, fontWeight: 600 }}>
+                            Skills:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {result.skills.slice(0, 3).map((skill, index) => (
+                              <Chip
+                                key={index}
+                                label={skill}
+                                size="small"
+                                sx={{ 
+                                  borderRadius: '8px',
+                                  background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
+                                  color: '#1e40af',
+                                  fontWeight: 600,
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': {
+                                    transform: 'scale(1.05)',
+                                    boxShadow: '0 4px 10px rgba(59, 130, 246, 0.2)'
+                                  }
+                                }}
+                              />
+                            ))}
+                            {result.skills.length > 3 && (
+                              <Chip
+                                label={`+${result.skills.length - 3}`}
+                                size="small"
+                                sx={{ 
+                                  borderRadius: '8px',
+                                  background: 'linear-gradient(135deg, #f0f9ff, #e6f2ff)',
+                                  color: '#1e40af',
+                                  fontWeight: 600
+                                }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+
+                        <Box sx={{ 
+                          mt: 2,
+                          pt: 2,
+                          borderTop: '1px solid rgba(226, 232, 240, 0.6)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <Typography variant="body2" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <LocationOnIcon sx={{ fontSize: '1rem' }} />
+                            {[result.city, result.state, result.country].filter(Boolean).join(', ') || 'Location not specified'}
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => handleContactClick(result)}
+                            sx={{
+                              borderRadius: '12px',
+                              borderColor: '#3b82f6',
+                              color: '#3b82f6',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                bgcolor: '#3b82f6',
+                                color: 'white',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                              }
+                            }}
+                          >
+                            Contact
+                          </Button>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  );
+                })}
+              </Grid>
             ) : (
               <Grid item xs={12} sx={{ textAlign: 'center', py: 6 }}>
-                <Box sx={{ maxWidth: 400, mx: 'auto' }}>
-                  <Typography variant="h6" sx={{ color: '#1e293b', mb: 1 }}>
+                <Box sx={{ 
+                  maxWidth: 400, 
+                  mx: 'auto', 
+                  p: 4, 
+                  borderRadius: '20px', 
+                  background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                  border: '1px solid rgba(226, 232, 240, 0.6)'
+                }}>
+                  <Typography variant="h5" sx={{ color: '#1e293b', mb: 2, fontWeight: 700 }}>
                     No Results Found
                   </Typography>
-                  <Typography variant="body2" sx={{ color: '#64748b' }}>
-                    {searchQuery || filters.country || filters.state || filters.city || filters.category || filters.experienceLevel || filters.teachingMethod || locationSearch
-                      ? 'Try adjusting your search criteria to find more mentors.'
-                      : 'Start searching to find skilled mentors that match your interests!'}
+                  <Typography variant="body1" sx={{ color: '#64748b', mb: 3, lineHeight: 1.6 }}>
+                    Try adjusting your search or filter criteria to find the perfect mentor or skill.
                   </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    sx={{
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-3px)',
+                        boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
+                      }
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
                 </Box>
               </Grid>
             )}
