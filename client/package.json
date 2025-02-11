@@ -7,8 +7,9 @@
     "node": "22.x"
   },
   "scripts": {
+    "postinstall": "chmod +x ./node_modules/.bin/vite",
     "dev": "vite",
-    "build": "vite build",
+    "build": "echo 'Running build script' && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
