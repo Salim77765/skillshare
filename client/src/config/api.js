@@ -53,14 +53,17 @@ api.interceptors.response.use(
 // API endpoints for reference
 export const endpoints = {
   auth: {
-    login: '/api/auth/login',
     register: '/api/auth/register',
-    profile: '/api/auth/me'
+    login: '/api/auth/login',
+    logout: '/api/auth/logout',
+    verify: '/api/auth/verify'
   },
   skillProfile: {
     create: '/api/skill-profile',
+    get: '/api/skill-profile',
+    update: '/api/skill-profile',
+    uploadImage: '/api/skill-profile/upload-picture',
     search: '/api/skill-profile/search',
-    update: (id) => `/api/skill-profile/${id}`,
     delete: (id) => `/api/skill-profile/${id}`
   },
   locations: {

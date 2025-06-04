@@ -20,6 +20,18 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    attachment: {
+        filename: String,
+        originalname: String,
+        mimetype: String,
+        size: Number,
+        url: String
+    },
+    messageType: {
+        type: String,
+        enum: ['text', 'document'],
+        default: 'text'
+    },
     read: {
         type: Boolean,
         default: false

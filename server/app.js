@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
 // Load env vars
 dotenv.config();
@@ -51,6 +53,28 @@ app.use((req, res, next) => {
   };
   next();
 });
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads', 'profile-pictures');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static files from uploads directory
+app.use('/uploads', (req, res, next) => {
+  console.log('Static file request:', req.url);
+  next();
+}, express.static(path.join(__dirname, 'uploads'), {
+  fallthrough: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (filePath.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);

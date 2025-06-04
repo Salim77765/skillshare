@@ -45,11 +45,17 @@ import {
   Edit as EditIcon,
   SupervisorAccount as MentorIcon,
   Chat as ChatIcon,
-  RequestPage as RequestsIcon
+  RequestPage as RequestsIcon,
+  AttachFile as AttachFileIcon,
+  Description as DocumentIcon,
+  TrendingUp as TrendingUpIcon,
+  Download as DownloadIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
 import { LoadingButton } from '@mui/lab';
 import { motion } from 'framer-motion';
 import { api, endpoints } from '../config/api';
+import { getProfilePictureUrl } from '../utils/imageUtils';
 
 // Default locations data
 const defaultLocations = {
@@ -146,6 +152,8 @@ const Dashboard = () => {
     skillsLearnedCount: 0
   });
   const [chatOpen, setChatOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const filteredMentors = useMemo(() => {
@@ -163,6 +171,30 @@ const Dashboard = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Poll for new messages when chat is open
+  useEffect(() => {
+    if (!selectedChat) return;
+    
+    const pollMessages = async () => {
+      try {
+        const response = await api.get(`/api/messages/${selectedChat._id}`);
+        if (response.data.success) {
+          setMessages(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error polling messages:', error);
+      }
+    };
+
+    // Initial fetch
+    pollMessages();
+    
+    // Poll every 3 seconds
+    const interval = setInterval(pollMessages, 3000);
+    
+    return () => clearInterval(interval);
+  }, [selectedChat]);
 
   useEffect(() => {
     try {
@@ -210,6 +242,11 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    fetchProfile();
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery || filters.country || filters.state || filters.city || filters.category || filters.experienceLevel || filters.teachingMethod || locationSearch) {
         searchProfiles();
@@ -231,26 +268,6 @@ const Dashboard = () => {
 
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const pollMessages = async () => {
-      if (selectedChat && chatOpen) {
-        try {
-          const response = await api.get(`/api/messages/${selectedChat._id}`);
-          if (response.data.success) {
-            setMessages(response.data.data);
-          }
-        } catch (error) {
-          console.error('Error polling messages:', error);
-        }
-      }
-    };
-
-    // Poll messages every 3 seconds when chat is open
-    const interval = setInterval(pollMessages, 3000);
-
-    return () => clearInterval(interval);
-  }, [selectedChat, chatOpen]);
 
   const fetchLocations = async () => {
     try {
@@ -408,7 +425,8 @@ const Dashboard = () => {
         // Update stats
         setUserStats(prev => ({
           ...prev,
-          skillsLearnedCount: (prev.skillsLearnedCount || 0) + 1
+          skillsLearnedCount: (prev.skillsLearnedCount || 0) + 1,
+          studentsCount: Math.max(0, (prev.studentsCount || 0) - 1)
         }));
 
         // Refresh all data
@@ -513,28 +531,78 @@ const Dashboard = () => {
   };
 
   const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
-    if (!newMessage.trim() || !selectedChat || isSendingMessage) return;
+    e.preventDefault();
+    if ((!newMessage.trim() && !selectedFile) || !selectedChat || isSendingMessage) return;
 
     setIsSendingMessage(true);
+
     try {
-      const response = await api.post('/api/messages', {
-        requestId: selectedChat._id,
-        content: newMessage.trim()
+      let formData = new FormData();
+      formData.append('requestId', selectedChat._id);
+      
+      if (newMessage.trim()) {
+        formData.append('content', newMessage.trim());
+      }
+      
+      if (selectedFile) {
+        formData.append('document', selectedFile);
+      }
+
+      const response = await api.post('/api/messages', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
+
       if (response.data.success) {
-        // Add the new message to the messages array immediately
-        setMessages(prevMessages => [...prevMessages, response.data.data]);
+        setMessages(prev => [...prev, response.data.data]);
         setNewMessage('');
-        scrollToBottom();
-      } else {
-        throw new Error(response.data.message || 'Failed to send message');
+        setSelectedFile(null);
       }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
       setIsSendingMessage(false);
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+      
+      // Check file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Only documents are allowed.');
+        return;
+      }
+      
+      setSelectedFile(file);
+    }
+  };
+
+  const handleDownload = (url, filename) => {
+    const link = document.createElement('a');
+    link.href = `${import.meta.env.VITE_API_URL}${url}`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleRequestAction = async (requestId, action) => {
@@ -606,6 +674,11 @@ const Dashboard = () => {
     if (user?.name) {
       setUserName(user.name);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+    fetchLocations();
   }, []);
 
   useEffect(() => {
@@ -1424,16 +1497,33 @@ const Dashboard = () => {
                     }
                   }}
                 >
-                  <Avatar 
-                    sx={{ 
-                      width: 35, 
-                      height: 35,
-                      bgcolor: 'primary.main',
-                      fontWeight: 600
-                    }}
-                  >
-                    {userName?.[0]?.toUpperCase() || 'U'}
-                  </Avatar>
+                  {skillProfile?.profilePicture ? (
+                    <Avatar
+                      src={getProfilePictureUrl(skillProfile.profilePicture)}
+                      sx={{ 
+                        width: 40, 
+                        height: 40,
+                        border: '2px solid #fff'
+                      }}
+                      imgProps={{
+                        onError: (e) => {
+                          console.error('Error loading profile picture:', e);
+                          e.target.src = undefined;
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Avatar 
+                      sx={{ 
+                        width: 40, 
+                        height: 40,
+                        bgcolor: 'primary.main',
+                        fontWeight: 600
+                      }}
+                    >
+                      {userName?.[0]?.toUpperCase() || 'U'}
+                    </Avatar>
+                  )}
                 </IconButton>
               </Box>
               <Menu
@@ -1528,8 +1618,8 @@ const Dashboard = () => {
       <Container 
         maxWidth="lg" 
         sx={{ 
-          pt: 4, 
-          pb: 8,
+          pt: 5, 
+          pb: 10,
           position: 'relative',
           '&::before': {
             content: '""',
@@ -1538,14 +1628,26 @@ const Dashboard = () => {
             left: '5%',
             width: '90%',
             height: '70%',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0) 70%)',
-            filter: 'blur(60px)',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0) 70%)',
+            filter: 'blur(80px)',
+            zIndex: 0,
+            pointerEvents: 'none'
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: '50%',
+            right: '10%',
+            width: '40%',
+            height: '40%',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0) 70%)',
+            filter: 'blur(80px)',
             zIndex: 0,
             pointerEvents: 'none'
           }
         }}
       >
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           {/* Stats Cards */}
           <Grid item xs={12} md={6}>
             <Paper
@@ -1553,37 +1655,73 @@ const Dashboard = () => {
               sx={{
                 p: 3,
                 height: '100%',
-                background: 'rgba(255, 255, 255, 0.9)',
+                background: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
+                borderRadius: '24px',
                 border: '1px solid rgba(226, 232, 240, 0.8)',
                 transition: 'all 0.3s ease-in-out',
+                position: 'relative',
+                overflow: 'hidden',
                 '&:hover': {
                   transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 24px rgba(148, 163, 184, 0.15)'
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: 'linear-gradient(to right, #3b82f6, #60a5fa)',
+                  zIndex: 1
                 }
               }}
             >
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1e293b' }}>
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  color: 'primary.main'
+                }}>
+                  <SchoolIcon fontSize="small" />
+                </Box>
                 Your Statistics
               </Typography>
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
                 <Grid item xs={6}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
-                    <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700 }}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    borderRadius: 3, 
+                    background: 'rgba(59, 130, 246, 0.05)',
+                    border: '1px solid rgba(59, 130, 246, 0.1)'
+                  }}>
+                    <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700, mb: 1 }}>
                       {userStats.studentsCount}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                       Students Taught
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={6}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
-                    <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700 }}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    borderRadius: 3, 
+                    background: 'rgba(139, 92, 246, 0.05)',
+                    border: '1px solid rgba(139, 92, 246, 0.1)'
+                  }}>
+                    <Typography variant="h4" sx={{ color: 'secondary.main', fontWeight: 700, mb: 1 }}>
                       {userStats.skillsLearnedCount}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                       Skills Learned
                     </Typography>
                   </Box>
@@ -1599,31 +1737,74 @@ const Dashboard = () => {
               sx={{
                 p: 3,
                 height: '100%',
-                background: 'rgba(255, 255, 255, 0.9)',
+                background: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
+                borderRadius: '24px',
                 border: '1px solid rgba(226, 232, 240, 0.8)',
                 transition: 'all 0.3s ease-in-out',
+                position: 'relative',
+                overflow: 'hidden',
                 '&:hover': {
                   transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 24px rgba(148, 163, 184, 0.15)'
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: 'linear-gradient(to right, #8b5cf6, #a78bfa)',
+                  zIndex: 1
                 }
               }}
             >
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1e293b' }}>
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  color: 'secondary.main'
+                }}>
+                  <TrendingUpIcon fontSize="small" />
+                </Box>
                 Trending Skills
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 1.5,
+                p: 2,
+                borderRadius: 3,
+                background: 'rgba(249, 250, 251, 0.7)'
+              }}>
                 {trendingSkills.map((skill, index) => (
                   <Chip
                     key={index}
                     label={skill}
+                    size="medium"
                     sx={{
-                      bgcolor: 'rgba(59, 130, 246, 0.1)',
-                      color: '#3b82f6',
+                      background: index % 3 === 0 ? 'rgba(59, 130, 246, 0.1)' : 
+                                index % 3 === 1 ? 'rgba(139, 92, 246, 0.1)' : 
+                                'rgba(236, 72, 153, 0.1)',
+                      color: index % 3 === 0 ? 'primary.main' : 
+                             index % 3 === 1 ? 'secondary.main' : 
+                             '#ec4899',
                       fontWeight: 500,
+                      borderRadius: '12px',
+                      px: 1.5,
+                      py: 1,
                       '&:hover': {
-                        bgcolor: 'rgba(59, 130, 246, 0.2)'
+                        background: index % 3 === 0 ? 'rgba(59, 130, 246, 0.2)' : 
+                                   index % 3 === 1 ? 'rgba(139, 92, 246, 0.2)' : 
+                                   'rgba(236, 72, 153, 0.2)',
+                        transform: 'translateY(-2px)',
+                        transition: 'all 0.2s ease-in-out'
                       }
                     }}
                   />
@@ -1634,181 +1815,403 @@ const Dashboard = () => {
         </Grid>
       </Container>
 
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Grid container spacing={3}>
-          {/* Results section */}
-          <Grid item xs={12}>
+      <Container maxWidth="lg" sx={{ mt: 6, mb: 8 }}>
+        <Grid container spacing={4}>
+          {/* Search Results */}
+          <Grid container spacing={4} sx={{ mt: 2 }}>
             {searching ? (
-              <Grid item xs={12} sx={{ textAlign: 'center', py: 4 }}>
-                <CircularProgress sx={{ color: '#3b82f6' }} />
+              <Grid item xs={12} sx={{ textAlign: 'center', py: 6 }}>
+                <CircularProgress size={48} thickness={4} sx={{ color: 'primary.main' }} />
+                <Typography variant="body1" sx={{ mt: 2, color: 'text.secondary', fontWeight: 500 }}>
+                  Searching for skills and mentors...
+                </Typography>
               </Grid>
             ) : searchResults.length > 0 ? (
               searchResults.map((result) => {
                 const isOwnProfile = result.user?._id === user?._id;
                 return (
                   <Grid item xs={12} sm={6} md={4} key={result._id}>
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 3,
-                        height: '100%',
-                        background: 'rgba(255, 255, 255, 0.9)',
-                        backdropFilter: 'blur(10px)',
-                        borderRadius: '16px',
-                        border: '1px solid rgba(226, 232, 240, 0.8)',
-                        transition: 'all 0.3s ease-in-out',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 12px 24px rgba(148, 163, 184, 0.15)'
-                        }
-                      }}
-                    >
-                      {isOwnProfile && (
-                        <Box
+                    <Box sx={{ 
+                      position: 'relative',
+                      height: '100%',
+                      '&:hover': {
+                        zIndex: 1
+                      }
+                    }}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative',
+                          borderRadius: '24px',
+                          bgcolor: 'background.paper',
+                          p: { xs: 2.5, sm: 3.5 },
+                          overflow: 'hidden',
+                          border: '1px solid rgba(226, 232, 240, 0.8)',
+                          '&:hover': {
+                            transform: 'translateY(-8px)',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                          },
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '4px',
+                            background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
+                            zIndex: 1
+                          }
+                        }}
+                      >
+                        {/* Category Badge */}
+                        <Chip
+                          label={result.category}
+                          size="small"
                           sx={{
                             position: 'absolute',
                             top: 16,
                             right: 16,
-                            background: '#3b82f6',
-                            color: 'white',
-                            px: 2,
+                            borderRadius: '12px',
+                            px: 1.5,
                             py: 0.5,
-                            borderRadius: '20px',
-                            fontSize: '0.75rem',
                             fontWeight: 600,
-                            letterSpacing: '0.5px',
-                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-                            zIndex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5
+                            backgroundColor: result.category === 'Mentor' ? 'rgba(139, 92, 246, 0.9)' : 'rgba(59, 130, 246, 0.9)',
+                            color: 'white',
+                            backdropFilter: 'blur(4px)',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                            '& .MuiChip-label': {
+                              px: 1
+                            }
                           }}
-                        >
-                          <PersonIcon sx={{ fontSize: 16 }} />
-                          Your Profile
-                        </Box>
-                      )}
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Avatar 
-                          sx={{ 
-                            mr: 2,
-                            bgcolor: '#3b82f6',
-                            color: 'white'
-                          }}
-                        >
-                          {result.user?.name?.[0] || 'U'}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h6" sx={{ mb: 0, color: '#1e293b', fontWeight: 600 }}>
-                            {result.title}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#64748b' }}>
-                            {result.user?.name}
-                          </Typography>
-                        </Box>
-                      </Box>
+                        />
 
-                      <Typography variant="body2" sx={{ color: '#64748b' }} gutterBottom>
-                        {result.category} • {result.experienceLevel}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          mb: 2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          color: '#475569',
-                          lineHeight: 1.6
-                        }}
-                      >
-                        {result.description}
-                      </Typography>
-
-                      <Box sx={{ mt: 'auto' }}>
-                        <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
-                          Skills:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {result.skills.slice(0, 3).map((skill, index) => (
-                            <Chip
-                              key={index}
-                              label={skill}
-                              size="small"
+                        {/* Header with Avatar and Name */}
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5, mt: 3, position: 'relative' }}>
+                          <Avatar
+                            src={getProfilePictureUrl(result.profilePicture)}
+                            sx={{
+                              width: { xs: 70, sm: 90 },
+                              height: { xs: 70, sm: 90 },
+                              mr: 2,
+                              border: '4px solid',
+                              borderColor: 'background.paper',
+                              boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                              transition: 'transform 0.3s ease',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                              }
+                            }}
+                            imgProps={{
+                              onError: (e) => {
+                                console.error('Error loading profile picture:', e);
+                                e.target.src = undefined;
+                              }
+                            }}
+                          >
+                            {result.user?.name?.[0]?.toUpperCase() || 'U'}
+                          </Avatar>
+                          <Box sx={{ flex: 1, minWidth: 0, pr: 7 }}>
+                            <Typography 
+                              variant="h6" 
                               sx={{ 
-                                borderRadius: '6px',
-                                bgcolor: '#dbeafe',
-                                color: '#1e40af',
+                                mb: 0.5, 
+                                fontWeight: 700,
+                                color: 'text.primary',
+                                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                lineHeight: 1.3,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {result.title}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                mb: 1,
+                                color: 'text.secondary',
                                 fontWeight: 500,
-                                '&:hover': {
-                                  bgcolor: '#bfdbfe'
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {result.user?.name}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              color="secondary"
+                              label={result.experienceLevel}
+                              sx={{ 
+                                borderRadius: 1,
+                                bgcolor: 'secondary.light',
+                                color: 'secondary.dark',
+                                fontWeight: 600,
+                                maxWidth: '100%',
+                                '& .MuiChip-label': {
+                                  px: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
                                 }
                               }}
                             />
-                          ))}
-                          {result.skills.length > 3 && (
-                            <Chip
-                              label={`+${result.skills.length - 3}`}
-                              size="small"
-                              sx={{ 
-                                borderRadius: '6px',
-                                bgcolor: '#dbeafe',
-                                color: '#1e40af',
-                                fontWeight: 500,
-                                '&:hover': {
-                                  bgcolor: '#bfdbfe'
-                                }
-                              }}
-                            />
-                          )}
+                          </Box>
                         </Box>
-                      </Box>
 
-                      <Box sx={{ 
-                        mt: 2,
-                        pt: 2,
-                        borderTop: '1px solid #e2e8f0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <Typography variant="body2" sx={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <LocationOnIcon sx={{ fontSize: '1rem' }} />
-                          {[result.city, result.state, result.country].filter(Boolean).join(', ') || 'Location not specified'}
-                        </Typography>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          onClick={() => handleContactClick(result)}
+                        {/* Description */}
+                        <Typography
+                          variant="body2"
                           sx={{
-                            borderRadius: '8px',
+                            mb: 2.5,
+                            color: 'text.secondary',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            lineHeight: 1.6,
+                            fontSize: '0.9rem',
+                            fontWeight: 400,
+                            letterSpacing: '0.01em'
+                          }}
+                        >
+                          {result.description}
+                        </Typography>
+
+                        {/* Skills Section */}
+                        <Box sx={{ mb: 2.5 }}>
+                          <Typography 
+                            variant="subtitle2" 
+                            sx={{ 
+                              mb: 1,
+                              color: 'primary.main',
+                              fontWeight: 700,
+                              fontSize: '0.875rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}
+                          >
+                            Skills & Expertise
+                          </Typography>
+                          <Box 
+                            sx={{ 
+                              display: 'flex', 
+                              flexWrap: 'wrap', 
+                              gap: 0.75,
+                              maxHeight: '80px',
+                              overflow: 'hidden',
+                              position: 'relative',
+                              '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: '30px',
+                                background: 'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))'
+                              }
+                            }}
+                          >
+                            {result.skills.map((skill, index) => (
+                              <Chip
+                                key={index}
+                                label={skill}
+                                size="small"
+                                sx={{
+                                  borderRadius: '8px',
+                                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                  color: 'text.primary',
+                                  fontWeight: 500,
+                                  transition: 'transform 0.2s ease',
+                                  '&:hover': {
+                                    bgcolor: 'rgba(0, 0, 0, 0.08)',
+                                    transform: 'translateY(-2px)'
+                                  }
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+
+                        {/* Additional Info */}
+                        <Box sx={{ mb: 2.5 }}>
+                          <Typography 
+                            variant="subtitle2" 
+                            sx={{ 
+                              mb: 1,
+                              color: 'primary.main',
+                              fontWeight: 700,
+                              fontSize: '0.875rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}
+                          >
+                            Additional Information
+                          </Typography>
+                          <Grid container spacing={1}>
+                            <Grid item xs={12}>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 1,
+                                color: 'text.secondary'
+                              }}>
+                                <LocationOnIcon sx={{ fontSize: 18, color: 'primary.light' }} />
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    fontWeight: 500,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {[result.city, result.state, result.country].filter(Boolean).join(', ')}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            {result.availability && (
+                              <Grid item xs={12}>
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 1,
+                                  color: 'text.secondary'
+                                }}>
+                                  <SchoolIcon sx={{ fontSize: 18, color: 'primary.light' }} />
+                                  <Typography 
+                                    variant="body2" 
+                                    sx={{ 
+                                      fontWeight: 500,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    Available: {result.availability}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            )}
+                            {result.languages && result.languages.length > 0 && (
+                              <Grid item xs={12}>
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 1,
+                                  color: 'text.secondary'
+                                }}>
+                                  <MessageIcon sx={{ fontSize: 18, color: 'primary.light' }} />
+                                  <Typography 
+                                    variant="body2" 
+                                    sx={{ 
+                                      fontWeight: 500,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    Languages: {result.languages.join(', ')}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            )}
+                          </Grid>
+                        </Box>
+
+                        {/* Contact Button */}
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          onClick={() => handleContactClick(result)}
+                          startIcon={<MessageIcon />}
+                          sx={{
+                            mt: 'auto',
+                            borderRadius: '12px',
+                            py: 1.5,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                             textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            transition: 'all 0.2s ease',
                             '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 6px 16px rgba(0,0,0,0.15)'
                             }
                           }}
                         >
-                          Contact
+                          Contact Now
                         </Button>
-                      </Box>
-                    </Paper>
+                      </Paper>
+                    </Box>
                   </Grid>
                 );
               })
             ) : (
-              <Grid item xs={12} sx={{ textAlign: 'center', py: 6 }}>
-                <Box sx={{ maxWidth: 400, mx: 'auto' }}>
-                  <Typography variant="h6" sx={{ color: '#1e293b', mb: 1 }}>
+              <Grid item xs={12} sx={{ textAlign: 'center', py: 8 }}>
+                <Box sx={{ 
+                  maxWidth: 500, 
+                  mx: 'auto',
+                  p: 4,
+                  borderRadius: '24px',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(226, 232, 240, 0.8)',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)'
+                }}>
+                  <Box sx={{ 
+                    width: 80, 
+                    height: 80, 
+                    borderRadius: '50%', 
+                    background: 'rgba(59, 130, 246, 0.08)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 3
+                  }}>
+                    <SearchIcon sx={{ fontSize: 36, color: 'primary.main', opacity: 0.8 }} />
+                  </Box>
+                  <Typography variant="h5" sx={{ color: 'text.primary', mb: 2, fontWeight: 600 }}>
                     No Results Found
                   </Typography>
-                  <Typography variant="body2" sx={{ color: '#64748b' }}>
+                  <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, maxWidth: 400, mx: 'auto' }}>
                     {searchQuery || filters.country || filters.state || filters.city || filters.category || filters.experienceLevel || filters.teachingMethod || locationSearch
                       ? 'Try adjusting your search criteria to find more mentors.'
                       : 'Start searching to find skilled mentors that match your interests!'}
                   </Typography>
+                  <Button 
+                    variant="outlined" 
+                    color="primary" 
+                    startIcon={<SearchIcon />}
+                    onClick={() => {
+                      // Clear filters
+                      setSearchQuery('');
+                      setFilters({
+                        country: '',
+                        state: '',
+                        city: '',
+                        category: '',
+                        experienceLevel: '',
+                        teachingMethod: ''
+                      });
+                      setLocationSearch('');
+                    }}
+                    sx={{ 
+                      borderRadius: '12px', 
+                      px: 3, 
+                      py: 1,
+                      textTransform: 'none',
+                      fontWeight: 500
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
                 </Box>
               </Grid>
             )}
@@ -1827,49 +2230,72 @@ const Dashboard = () => {
             maxHeight: '600px',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.6)',
+            background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
+            borderRadius: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.5)'
           }
         }}
         sx={{
           '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
+            backgroundColor: 'rgba(15, 23, 42, 0.3)',
             backdropFilter: 'blur(8px)'
           }
         }}
       >
-        <DialogTitle sx={{ background: 'rgba(255, 255, 255, 0.3)' }}>
+        <DialogTitle sx={{ 
+          background: 'rgba(255, 255, 255, 0.8)',
+          borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+          px: 3,
+          py: 2
+        }}>
           {selectedChat && user && (
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                pb: 1
               }}
             >
-              <Box>
-                <Typography variant="h6" sx={{ 
-                  color: 'primary.main',
-                  fontWeight: 500,
-                  fontSize: '1.1rem'
-                }}>
-                </Typography>
-                <Typography variant="caption" display="block" sx={{ color: 'text.secondary', opacity: 0.7 }}>
-                  {selectedChat.skillProfile.title}
-                </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar
+                  src={selectedChat.profilePicture}
+                  sx={{ 
+                    width: 40, 
+                    height: 40,
+                    border: '2px solid #fff',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  {selectedChat.name?.[0]?.toUpperCase() || 'U'}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ 
+                    color: 'text.primary',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    lineHeight: 1.2
+                  }}>
+                    {selectedChat.name}
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ 
+                    color: 'text.secondary', 
+                    fontSize: '0.75rem',
+                    lineHeight: 1.2
+                  }}>
+                    {selectedChat.skillProfile.title}
+                  </Typography>
+                </Box>
               </Box>
               <IconButton 
                 onClick={handleChatClose} 
                 size="small"
                 sx={{
                   color: 'text.secondary',
+                  backgroundColor: 'rgba(0, 0, 0, 0.03)',
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    backgroundColor: 'rgba(0, 0, 0, 0.08)'
                   }
                 }}
               >
@@ -1883,22 +2309,57 @@ const Dashboard = () => {
             flex: 1, 
             display: 'flex', 
             flexDirection: 'column', 
-            p: 2,
-            bgcolor: 'transparent'
+            p: 0,
+            bgcolor: 'transparent',
+            overflow: 'hidden'
           }}
         >
           <Box 
             sx={{ 
               flex: 1, 
               overflowY: 'auto', 
-              mb: 2,
+              p: 3,
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              gap: 2,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'rgba(0, 0, 0, 0.03)',
+                borderRadius: '8px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(0, 0, 0, 0.1)',
+                borderRadius: '8px',
+                '&:hover': {
+                  background: 'rgba(0, 0, 0, 0.15)',
+                },
+              },
             }}
           >
             {isLoadingChat ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                 <CircularProgress size={32} thickness={4} sx={{ color: 'primary.light' }} />
+              </Box>
+            ) : messages.length === 0 ? (
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                height: '100%',
+                opacity: 0.7,
+                textAlign: 'center',
+                px: 4
+              }}>
+                <ChatIcon sx={{ fontSize: 48, color: 'primary.light', mb: 2, opacity: 0.6 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+                  Start a conversation
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Send a message to begin chatting with {selectedChat?.name}
+                </Typography>
               </Box>
             ) : (
               messages.map((message) => {
@@ -1910,12 +2371,11 @@ const Dashboard = () => {
                       width: '100%',
                       display: 'flex',
                       justifyContent: isSender ? 'flex-end' : 'flex-start',
-                      mb: 2
                     }}
                   >
                     <Box
                       sx={{
-                        maxWidth: '70%',
+                        maxWidth: '75%',
                         display: 'flex',
                         flexDirection: isSender ? 'row' : 'row-reverse',
                         alignItems: 'flex-end',
@@ -1926,10 +2386,11 @@ const Dashboard = () => {
                         sx={{
                           width: 28,
                           height: 28,
-                          bgcolor: isSender ? 'primary.main' : 'grey.300',
+                          bgcolor: isSender ? 'primary.main' : 'grey.200',
                           color: isSender ? 'white' : 'text.primary',
                           fontSize: '0.875rem',
-                          fontWeight: 500
+                          fontWeight: 500,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                         }}
                       >
                         {isSender ? user?.name?.charAt(0) : message.sender.name?.charAt(0)}
@@ -1937,28 +2398,56 @@ const Dashboard = () => {
                       <Paper
                         elevation={0}
                         sx={{
-                          p: 1.5,
+                          p: 2,
                           backgroundColor: isSender 
                             ? 'primary.main'
-                            : 'grey.100',
+                            : 'grey.50',
                           color: isSender ? 'white' : 'text.primary',
                           borderRadius: isSender 
                             ? '20px 20px 0 20px'
                             : '20px 20px 20px 0',
                           position: 'relative',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                          boxShadow: isSender
+                            ? '0 4px 6px -1px rgba(59, 130, 246, 0.2), 0 2px 4px -1px rgba(59, 130, 246, 0.1)'
+                            : '0 2px 4px rgba(0,0,0,0.05)'
                         }}
                       >
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            lineHeight: 1.5,
-                            fontWeight: 400,
-                            wordBreak: 'break-word'
-                          }}
-                        >
-                          {message.content}
-                        </Typography>
+                        {message.messageType === 'document' ? (
+                          <Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <DocumentIcon sx={{ fontSize: 20 }} />
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {message.attachment.originalname}
+                              </Typography>
+                            </Box>
+                            <Button
+                              size="small"
+                              startIcon={<DownloadIcon />}
+                              onClick={() => handleDownload(message.attachment.url, message.attachment.originalname)}
+                              sx={{
+                                color: isSender ? 'white' : 'primary.main',
+                                '&:hover': {
+                                  backgroundColor: isSender 
+                                    ? 'rgba(255, 255, 255, 0.1)'
+                                    : 'rgba(25, 118, 210, 0.04)'
+                                }
+                              }}
+                            >
+                              Download
+                            </Button>
+                          </Box>
+                        ) : (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              lineHeight: 1.5,
+                              fontWeight: 400,
+                              wordBreak: 'break-word'
+                            }}
+                          >
+                            {message.content}
+                          </Typography>
+                        )}
                         <Box
                           sx={{
                             display: 'flex',
@@ -2002,72 +2491,100 @@ const Dashboard = () => {
             component="form" 
             onSubmit={handleSendMessage} 
             sx={{ 
-              mt: 2,
-              pt: 2,
-              borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-              backgroundColor: 'rgba(255, 255, 255, 0.3)',
-              borderRadius: '16px',
-              p: 1.5,
-              backdropFilter: 'blur(8px)'
+              p: 2, 
+              borderTop: '1px solid rgba(226, 232, 240, 0.8)',
+              background: 'rgba(255, 255, 255, 0.8)'
             }}
           >
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                fullWidth
-                size="small"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                variant="outlined"
+            {selectedFile && (
+              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip
+                  icon={<DocumentIcon />}
+                  label={selectedFile.name}
+                  onDelete={() => setSelectedFile(null)}
+                  color="primary"
+                  variant="outlined"
+                  sx={{
+                    borderRadius: '8px',
+                    '& .MuiChip-deleteIcon': {
+                      color: 'text.secondary',
+                      '&:hover': {
+                        color: 'error.main'
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            )}
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileSelect}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+              />
+              <IconButton
+                color="primary"
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isLoadingChat || isSendingMessage}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
+                sx={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)'
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
+              >
+                <AttachFileIcon fontSize="small" />
+              </IconButton>
+              <TextField
+                fullWidth
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                disabled={isLoadingChat || isSendingMessage}
+                variant="outlined"
+                size="small"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                    borderRadius: '12px',
-                    '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'rgba(99, 102, 241, 0.2)',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'primary.main',
-                      borderWidth: '1px',
-                    },
-                  },
-                  '& .MuiOutlinedInput-input': {
-                    '&::placeholder': {
-                      color: 'rgba(0, 0, 0, 0.4)'
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    '&.Mui-focused': {
+                      boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
                     }
                   }
                 }}
               />
-              <LoadingButton 
-                type="submit" 
-                variant="contained" 
-                loading={isSendingMessage}
-                disabled={!newMessage.trim() || isLoadingChat}
+              <IconButton
+                color="primary"
+                type="submit"
+                disabled={(!newMessage.trim() && !selectedFile) || isLoadingChat || isSendingMessage}
                 sx={{
-                  minWidth: '100px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(99, 102, 241, 0.7)',
-                  backdropFilter: 'blur(8px)',
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  width: 40,
+                  height: 40,
                   '&:hover': {
-                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    backgroundColor: 'primary.dark',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)'
                   },
                   '&.Mui-disabled': {
-                    backgroundColor: 'rgba(203, 213, 225, 0.2)',
-                  }
+                    backgroundColor: 'action.disabledBackground',
+                    color: 'action.disabled'
+                  },
+                  transition: 'all 0.2s ease-in-out'
                 }}
               >
-                Send
-              </LoadingButton>
+                {isSendingMessage ? (
+                  <CircularProgress size={24} thickness={4} sx={{ color: 'inherit' }} />
+                ) : (
+                  <SendIcon />
+                )}
+              </IconButton>
             </Box>
           </Box>
         </DialogContent>
@@ -2078,30 +2595,62 @@ const Dashboard = () => {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(15, 23, 42, 0.3)',
+            backdropFilter: 'blur(8px)'
+          }
+        }}
       >
-        <DialogTitle>
-          Send Learning Request
+        <DialogTitle sx={{ 
+          px: 3, 
+          py: 2.5,
+          borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
+            Send Learning Request
+          </Typography>
           {selectedProfile && (
-            <Typography variant="subtitle2" color="text.secondary">
+            <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 400 }}>
               to {selectedProfile.title}
             </Typography>
           )}
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label="Message (Optional)"
-              placeholder="Introduce yourself and explain what you'd like to learn..."
-              value={requestMessage}
-              onChange={(e) => setRequestMessage(e.target.value)}
-            />
-          </Box>
+        <DialogContent sx={{ p: 3, pt: 3 }}>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Message (Optional)"
+            placeholder="Introduce yourself and explain what you'd like to learn..."
+            value={requestMessage}
+            onChange={(e) => setRequestMessage(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                '&.Mui-focused': {
+                  boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                }
+              }
+            }}
+          />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="inherit">
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid rgba(226, 232, 240, 0.8)' }}>
+          <Button 
+            onClick={handleCloseDialog} 
+            color="inherit"
+            sx={{
+              fontWeight: 500,
+              px: 3
+            }}
+          >
             Cancel
           </Button>
           <LoadingButton
@@ -2109,6 +2658,17 @@ const Dashboard = () => {
             loading={isSubmitting}
             variant="contained"
             color="primary"
+            sx={{
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2), 0 2px 4px -1px rgba(59, 130, 246, 0.1)',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 10px -1px rgba(59, 130, 246, 0.3), 0 4px 6px -1px rgba(59, 130, 246, 0.15)'
+              },
+              transition: 'all 0.2s ease-in-out'
+            }}
           >
             Send Request
           </LoadingButton>
