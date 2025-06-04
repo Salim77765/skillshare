@@ -19,9 +19,7 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://skill-share-platform.vercel.app', 'https://skillshare-beru.vercel.app', /\.vercel\.app$/]
-    : 'http://localhost:5173',
+  origin: ['https://skill-share-platform.vercel.app', 'https://skillshare-beru.vercel.app', 'http://localhost:5173'],
   credentials: true,
   optionsSuccessStatus: 200
 };
