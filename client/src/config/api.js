@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const api = axios.create({
@@ -66,5 +68,8 @@ export const endpoints = {
   locations: {
     countries: '/api/skill-profile/locations/countries',
     states: (country) => `/api/skill-profile/locations/states/${country}`
+  },
+  skills: {
+    trending: '/api/skills/trending'
   }
 };

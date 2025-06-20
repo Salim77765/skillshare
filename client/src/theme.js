@@ -112,7 +112,25 @@ const theme = createTheme({
     '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    // ... rest of the default shadows
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 2px 2px -2px rgba(0, 0, 0, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 3px 4px -2px rgba(0, 0, 0, 0.25), 0 1px 8px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 3px 4px -2px rgba(0, 0, 0, 0.25), 0 3px 8px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 4px 6px -2px rgba(0, 0, 0, 0.25), 0 2px 12px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 4px 6px -2px rgba(0, 0, 0, 0.25), 0 6px 16px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 4px 8px -2px rgba(0, 0, 0, 0.25), 0 6px 20px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 5px 8px -2px rgba(0, 0, 0, 0.25), 0 8px 24px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 6px 12px -4px rgba(0, 0, 0, 0.25), 0 12px 28px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 7px 12px -4px rgba(0, 0, 0, 0.25), 0 12px 32px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 8px 14px -4px rgba(0, 0, 0, 0.25), 0 14px 44px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 8px 16px -4px rgba(0, 0, 0, 0.25), 0 16px 48px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 9px 18px -4px rgba(0, 0, 0, 0.25), 0 18px 52px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 10px 20px -4px rgba(0, 0, 0, 0.25), 0 20px 56px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 10px 20px -4px rgba(0, 0, 0, 0.25), 0 20px 60px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 12px 22px -4px rgba(0, 0, 0, 0.25), 0 22px 64px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 12px 24px -4px rgba(0, 0, 0, 0.25), 0 24px 70px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 14px 26px -6px rgba(0, 0, 0, 0.25), 0 26px 80px 0 rgba(0, 0, 0, 0.2)',
+    '0 0 1px 0 rgba(0, 0, 0, 0.31), 0 14px 28px -6px rgba(0, 0, 0, 0.25), 0 32px 90px 0 rgba(0, 0, 0, 0.2)'
   ],
   components: {
     MuiButton: {

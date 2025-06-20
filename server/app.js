@@ -14,6 +14,7 @@ const skillProfileRoutes = require('./routes/skillProfile');
 const requestRoutes = require('./routes/requests');
 const notificationRoutes = require('./routes/notifications');
 const messageRoutes = require('./routes/messages');
+const skillsRoutes = require('./routes/skills');
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use('/api/skill-profile', skillProfileRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/skills', skillsRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -90,7 +92,8 @@ app.get('/', (req, res) => {
       skillProfile: '/api/skill-profile',
       requests: '/api/requests',
       notifications: '/api/notifications',
-      messages: '/api/messages'
+      messages: '/api/messages',
+      skills: '/api/skills'
     }
   });
 });

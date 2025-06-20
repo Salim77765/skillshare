@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
+import { LoadScript, Autocomplete as GoogleAutocomplete } from '@react-google-maps/api';
 import {
   Box,
   Typography,
@@ -65,6 +66,10 @@ const defaultLocations = {
   'Canada': ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
   'Australia': ['New South Wales', 'Victoria', 'Queensland', 'Western Australia']
 };
+
+// Google Maps constants
+const libraries = ['places'];
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -143,6 +148,12 @@ const Dashboard = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  
+  // Google Maps related state variables
+  const [useGoogleMaps] = useState(true);
+  const [autocomplete, setAutocomplete] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [user, setUser] = useState(null);
   const [skillProfile, setSkillProfile] = useState(null);
@@ -241,11 +252,20 @@ const Dashboard = () => {
     fetchLocations();
   }, []);
 
+  // Google Maps Autocomplete handlers
+  const handleAutocompleteLoad = useCallback((autocompleteInstance) => {
+    console.log('Google Maps Places loaded');
+    setAutocomplete(autocompleteInstance);
+  }, []);
+
+
+
   useEffect(() => {
     fetchProfile();
     fetchLocations();
   }, []);
 
+   
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery || filters.country || filters.state || filters.city || filters.category || filters.experienceLevel || filters.teachingMethod || locationSearch) {
@@ -681,11 +701,66 @@ const Dashboard = () => {
     fetchLocations();
   }, []);
 
+  // Google Maps Autocomplete handlers
+  const onLoad = useCallback((autocompleteInstance) => {
+    console.log('Google Maps Places loaded');
+    setAutocomplete(autocompleteInstance);
+  }, []);
+
+  const onPlaceChanged = useCallback(() => {
+    if (autocomplete) {
+      const place = autocomplete.getPlace();
+      console.log('Selected place:', place);
+      
+      if (!place.geometry) {
+        console.error('No geometry for this place');
+        return;
+      }
+
+      let state = '';
+      let country = '';
+      let city = '';
+      
+      place.address_components?.forEach(component => {
+        const types = component.types;
+        if (types.includes('locality') || types.includes('postal_town')) {
+          city = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          state = component.long_name;
+        }
+        if (types.includes('country')) {
+          country = component.long_name;
+        }
+      });
+
+      setFilters(prev => ({
+        ...prev,
+        country,
+        state,
+        city
+      }));
+
+      // Update states based on selected country
+      if (country && defaultLocations[country]) {
+        setStates(defaultLocations[country] || []);
+      } else {
+        setStates([]);
+      }
+    }
+  }, [autocomplete]);
+
+  const onLoadError = useCallback((error) => {
+    console.error('Google Maps Places load error:', error);
+    setLoadError(error);
+  }, []);
+
   useEffect(() => {
     fetchProfile();
     fetchLocations();
   }, []);
 
+   
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery || filters.country || filters.state || filters.city || filters.category || filters.experienceLevel || filters.teachingMethod || locationSearch) {
@@ -926,20 +1001,53 @@ const Dashboard = () => {
                     
                     <Grid container spacing={2}>
                       <Grid item xs={12} sm={4}>
-                        <TextField
-                          select
-                          fullWidth
-                          label="Country"
-                          value={filters.country}
-                          onChange={(e) => handleFilterChange('country', e.target.value)}
-                        >
-                          <MenuItem value="">All Countries</MenuItem>
-                          {countries.map((country) => (
-                            <MenuItem key={country} value={country}>
-                              {country}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                        {useGoogleMaps ? (
+                          <LoadScript
+                            googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+                            libraries={libraries}
+                            onLoad={() => setIsLoaded(true)}
+                            onError={(error) => setLoadError(error)}
+                          >
+                            <GoogleAutocomplete
+                              onLoad={onLoad}
+                              onPlaceChanged={onPlaceChanged}
+                              onLoadError={onLoadError}
+                              options={{
+                                types: ['country'],
+                                fields: ['address_components', 'geometry', 'name']
+                              }}
+                            >
+                              <TextField
+                                fullWidth
+                                label="Country"
+                                value={filters.country}
+                                placeholder="Search for a country"
+                                InputProps={{
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <LocationOnIcon sx={{ color: '#64748b' }} />
+                                    </InputAdornment>
+                                  ),
+                                }}
+                              />
+                            </GoogleAutocomplete>
+                          </LoadScript>
+                        ) : (
+                          <TextField
+                            select
+                            fullWidth
+                            label="Country"
+                            value={filters.country}
+                            onChange={(e) => handleFilterChange('country', e.target.value)}
+                          >
+                            <MenuItem value="">All Countries</MenuItem>
+                            {countries.map((country) => (
+                              <MenuItem key={country} value={country}>
+                                {country}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        )}
                       </Grid>
                       <Grid item xs={12} sm={4}>
                         <TextField
@@ -1786,7 +1894,7 @@ const Dashboard = () => {
                 {trendingSkills.map((skill, index) => (
                   <Chip
                     key={index}
-                    label={skill}
+                    label={typeof skill === 'string' ? skill : skill.skill}
                     size="medium"
                     sx={{
                       background: index % 3 === 0 ? 'rgba(59, 130, 246, 0.1)' : 
